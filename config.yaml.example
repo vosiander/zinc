@@ -1,0 +1,10 @@
+core:
+  logging:
+    logLevel: trace
+  rest:
+    enable: true
+  libp2p:
+    enable: true
+  boltdb:
+    enable: true
+    file: db/bolt.db
