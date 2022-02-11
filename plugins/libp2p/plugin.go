@@ -10,15 +10,13 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-
-	"github.com/libp2p/go-libp2p-core/network"
-	discovery "github.com/libp2p/go-libp2p-discovery"
-
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
+	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	disc "github.com/libp2p/go-libp2p-discovery"
+	discovery "github.com/libp2p/go-libp2p-discovery"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/siklol/zinc/plugins"

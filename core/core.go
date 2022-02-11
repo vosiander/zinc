@@ -17,7 +17,6 @@ import (
 	heartbeat_consumer "github.com/siklol/zinc/plugins/heartbeat-consumer"
 	heartbeat_publisher "github.com/siklol/zinc/plugins/heartbeat-publisher"
 	"github.com/siklol/zinc/plugins/kafka"
-	"github.com/siklol/zinc/plugins/libp2p"
 	"github.com/siklol/zinc/plugins/loglevel"
 	"github.com/siklol/zinc/plugins/nats"
 	"github.com/siklol/zinc/plugins/postgres"
@@ -59,13 +58,14 @@ type (
 		Kafka              kafka.Config               `yaml:"kafka" json:"kafka"`
 		Postgres           postgres.Config            `yaml:"postgres" json:"postgres"`
 		GitHelper          githelper.Config           `yaml:"gitHelper" json:"gitHelper"`
-		Libp2p             libp2p.Config              `yaml:"libp2p" json:"libp2p"`
-		PostgresCrud       postgres_crud.Config       `yaml:"postgresCrud" json:"postgresCrud"`
-		Prometheus         prometheus.Config          `yaml:"prometheus" json:"prometheus"`
-		REST               rest.Config                `yaml:"rest" json:"rest"`
-		S3File             s3file.Config              `yaml:"s3File" json:"s3File"`
-		Telegram           telegram.Config            `yaml:"telegram" json:"telegram"`
-		Usermanager        usermanager.Config         `yaml:"usermanager" json:"usermanager"`
+		// TODO enable libp2p when ready
+		// Libp2p             libp2p.Config              `yaml:"libp2p" json:"libp2p"`
+		PostgresCrud postgres_crud.Config `yaml:"postgresCrud" json:"postgresCrud"`
+		Prometheus   prometheus.Config    `yaml:"prometheus" json:"prometheus"`
+		REST         rest.Config          `yaml:"rest" json:"rest"`
+		S3File       s3file.Config        `yaml:"s3File" json:"s3File"`
+		Telegram     telegram.Config      `yaml:"telegram" json:"telegram"`
+		Usermanager  usermanager.Config   `yaml:"usermanager" json:"usermanager"`
 	}
 )
 
@@ -140,7 +140,7 @@ func (c *Core) WithAllPlugins(config AllPluginConfig) *Core {
 	c.Register(telegram.New().Boot(config.Telegram, l, um).(*telegram.Plugin))
 	c.Register(s3file.New().Boot(config.S3File, l).(*s3file.Plugin))
 	c.Register(githelper.New().Boot(config.GitHelper, l).(*githelper.Plugin))
-	c.Register(libp2p.New().Boot(config.Libp2p, l, r.Router()).(*libp2p.Plugin))
+	// c.Register(libp2p.New().Boot(config.Libp2p, l, r.Router()).(*libp2p.Plugin))
 	c.Register(p, pr, n, um, es, r)
 
 	if es.IsEnabled() {
