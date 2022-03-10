@@ -55,6 +55,9 @@ func (p *Plugin) Boot(conf interface{}, dependencies ...interface{}) plugins.Plu
 		return p
 	}
 
+	p.incGauges = map[string]prometheus.Gauge{}
+	p.incCounters = map[string]prometheus.Counter{}
+
 	return p
 }
 
