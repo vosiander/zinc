@@ -117,5 +117,5 @@ func (p *Plugin) AddGauges(name string, gauge float64, help string) {
 
 		p.incGauges[name] = inc
 	}
-	p.incGauges[name].Add(gauge)
+	p.incGauges[name].Set(gauge)
 }
