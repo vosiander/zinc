@@ -122,7 +122,7 @@ func (tx *Transaction) Upsert(id string, data any) error {
 }
 
 func (tx *Transaction) Find(id string, target any) error {
-	row := tx.db.QueryRowx(fmt.Sprintf("SELECT data from %s where id = $1", tx.table), id)
+	row := tx.db.QueryRowx(fmt.Sprintf("SELECT data from %s where id = $1", tx.table), id) //
 	err := row.Err()
 	if err != nil {
 		return err
