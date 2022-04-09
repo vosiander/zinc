@@ -144,7 +144,7 @@ func (tx *Transaction) Find(id string, target any) error {
 }
 
 func (tx *Transaction) Query(qsql string, params ...any) *sqlx.Row {
-	return tx.db.QueryRowx(fmt.Sprintf(qsql, tx.table), params)
+	return tx.db.QueryRowx(fmt.Sprintf(qsql, tx.table), params...)
 }
 
 func (tx *Transaction) Delete(id string) error {
