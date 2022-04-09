@@ -85,7 +85,7 @@ func (p *Plugin) CreateTable(name string) (*Transaction, error) {
     data jsonb not null,
 	created_at timestamp not null,
 	updated_at timestamp no null
-);;`
+);;` //
 
 	p.logger.WithField("name", name).Debug("trying to create table")
 
