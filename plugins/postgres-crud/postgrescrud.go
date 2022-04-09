@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/siklol/zinc/plugins/postgres"
 
@@ -82,7 +83,9 @@ func (p *Plugin) CreateTable(name string) (*Transaction, error) {
 	schema := `create table if not exists %s
 (
     id text constraint id_%s_pk primary key,
-    data jsonb not null
+    data jsonb not null,
+	created_at timestamp not null,
+	updated_at timestamp no null
 );;`
 
 	p.logger.WithField("name", name).Debug("trying to create table")
@@ -113,8 +116,8 @@ func (tx *Transaction) Upsert(id string, data interface{}) error {
 		return err
 	}
 
-	schema := `INSERT INTO %s (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET id = $1, data = $2;`
-	_, err = tx.db.Exec(fmt.Sprintf(schema, tx.table), id, jData)
+	schema := `INSERT INTO %s (id, data, created_at, updated_at) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO UPDATE SET id = $1, data = $2, updated_at = $4;`
+	_, err = tx.db.Exec(fmt.Sprintf(schema, tx.table), id, jData, time.Now(), time.Now())
 
 	return err
 }
