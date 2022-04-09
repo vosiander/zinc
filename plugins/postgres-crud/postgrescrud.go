@@ -8,13 +8,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/siklol/zinc/plugins/postgres"
-
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/siklol/zinc/plugins"
+	"github.com/siklol/zinc/plugins/postgres"
 	"github.com/sirupsen/logrus"
 )
 
