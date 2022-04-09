@@ -84,7 +84,7 @@ func (p *Plugin) CreateTable(name string) (*Transaction, error) {
     id text constraint id_%s_pk primary key,
     data jsonb not null,
 	created_at timestamp not null default NOW(),
-	updated_at timestamp no null default NOW()
+	updated_at timestamp not null default NOW()
 );;` //
 
 	p.logger.WithField("name", name).Debug("trying to create table")
