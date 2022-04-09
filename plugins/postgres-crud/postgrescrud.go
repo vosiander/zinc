@@ -48,7 +48,7 @@ func (p *Plugin) Start() error {
 	return nil
 }
 
-func (p *Plugin) Boot(conf interface{}, dependencies ...interface{}) plugins.Plugin {
+func (p *Plugin) Boot(conf any, dependencies ...any) plugins.Plugin {
 	p.logger = logrus.WithField("component", "postgres-crud")
 	l := p.logger
 	p.conf = conf.(Config)
@@ -109,7 +109,7 @@ func (p *Plugin) NewTransaction(name string) *Transaction {
 	}
 }
 
-func (tx *Transaction) Upsert(id string, data interface{}) error {
+func (tx *Transaction) Upsert(id string, data any) error {
 	jData, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -121,7 +121,7 @@ func (tx *Transaction) Upsert(id string, data interface{}) error {
 	return err
 }
 
-func (tx *Transaction) Find(id string, target interface{}) error {
+func (tx *Transaction) Find(id string, target any) error {
 	row := tx.db.QueryRowx(fmt.Sprintf("SELECT data from %s where id = $1", tx.table), id)
 	err := row.Err()
 	if err != nil {
@@ -141,6 +141,10 @@ func (tx *Transaction) Find(id string, target interface{}) error {
 	}
 
 	return nil
+}
+
+func (tx *Transaction) Query(qsql string, params ...any) *sqlx.Row {
+	return tx.db.QueryRowx(fmt.Sprintf(qsql, tx.table), params)
 }
 
 func (tx *Transaction) Delete(id string) error {
