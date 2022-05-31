@@ -42,7 +42,7 @@ var (
 func main() {
 	c := core.NewCore(&conf, &cliOpts).
 		WithOptions(&conf, core.LoadYamlConfig(cliOpts.ConfigFile)).
-		WithOptions(&conf, core.LoadConfigurator("de.siklol-zinc.example-go-plugins", cliOpts.ConfiguratorURL)).
+		//WithOptions(&conf, core.LoadConfigurator("de.siklol-zinc.example-go-plugins", cliOpts.ConfiguratorURL)).
 		WithAllPlugins(conf.Core)
 
 	l := c.Logger()

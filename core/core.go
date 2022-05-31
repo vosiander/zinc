@@ -2,6 +2,7 @@ package core
 
 import (
 	"os"
+	"sync"
 	"syscall"
 
 	"github.com/siklol/zinc/plugins"
@@ -9,6 +10,7 @@ import (
 	"github.com/siklol/zinc/plugins/boot"
 	"github.com/siklol/zinc/plugins/clidaemon"
 	"github.com/siklol/zinc/plugins/configurator"
+	"github.com/siklol/zinc/plugins/etcd"
 	"github.com/siklol/zinc/plugins/eventstore"
 	"github.com/siklol/zinc/plugins/eventstore/eventsourcing"
 	boltdb2 "github.com/siklol/zinc/plugins/eventstore/storage/boltdb"
@@ -53,6 +55,7 @@ type (
 		CLIDaemon          clidaemon.Config           `yaml:"cliDaemon" json:"cliDaemon"`
 		Logging            loglevel.Config            `yaml:"logging" json:"logging"`
 		NATS               nats.Config                `yaml:"nats" json:"nats"`
+		Etcd               etcd.Config                `yaml:"etcd" json:"etcd"`
 		HeartbeatConsumer  heartbeat_consumer.Config  `yaml:"heartbeatConsumer" json:"heartbeatConsumer"`
 		HeartbeatPublisher heartbeat_publisher.Config `yaml:"heartbeatPublisher" json:"heartbeatPublisher"`
 		Kafka              kafka.Config               `yaml:"kafka" json:"kafka"`
@@ -140,6 +143,7 @@ func (c *Core) WithAllPlugins(config AllPluginConfig) *Core {
 	c.Register(telegram.New().Boot(config.Telegram, l, um).(*telegram.Plugin))
 	c.Register(s3file.New().Boot(config.S3File, l).(*s3file.Plugin))
 	c.Register(githelper.New().Boot(config.GitHelper, l).(*githelper.Plugin))
+	c.Register(etcd.New().Boot(config.Etcd, l).(*etcd.Plugin))
 	// c.Register(libp2p.New().Boot(config.Libp2p, l, r.Router()).(*libp2p.Plugin))
 	c.Register(p, pr, n, um, es, r)
 
@@ -231,16 +235,23 @@ func (c *Core) SendSigIntSignal() {
 }
 
 func (c *Core) close() {
+	l := c.Logger()
+
+	wg := sync.WaitGroup{}
+	wg.Add(len(c.plugins))
 	for pn, p := range c.plugins {
 		go func(name string, cp plugins.Plugin) {
+			l.Tracef("closing %s", name)
 			if err := cp.Close(); err != nil {
 				c.logger.
 					WithError(err).
 					WithField("component", "start-plugin-"+name).
 					Error("error starting plugin")
 			}
+			wg.Done()
 		}(pn, p)
 	}
+	wg.Wait()
 }
 
 func (c *Core) Shutdown(f func()) {
