@@ -8,10 +8,6 @@ import (
 )
 
 type (
-	Receipt struct {
-		ID string
-	}
-
 	Config struct {
 		Test int                  `yaml:"test" json:"test"`
 		Core core.AllPluginConfig `yaml:"core" json:"core"`
@@ -39,9 +35,10 @@ func main() {
 	c.StartPlugins()
 	c.MustGet(clidaemon.Name).(*clidaemon.Plugin).RunCLI(func() {
 		l.Debug("started")
+		lead := etcdP.Leader()
 
-		if err := etcdP.AcquireLeader("/test/", c.ID()); err != nil {
-			l.WithError(err).Warn("could not acquire leader")
+		if err := lead.Acquire(); err != nil {
+			l.WithError(err).Warn("could not acquire leader position")
 		}
 
 		t := time.Tick(5 * time.Second)
@@ -49,7 +46,7 @@ func main() {
 			for {
 				select {
 				case <-t:
-					if etcdP.IsLeader() {
+					if lead.IsLeader() {
 						l.Debug("--- leader")
 					} else {
 						l.Debug("~~~ follower")

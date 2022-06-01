@@ -1,0 +1,21 @@
+version: '3'
+
+env:
+  VERSION: 0.0.1
+  LOG_LEVEL: trace
+
+vars:
+  CURRENT_DIR: { sh: pwd }
+
+tasks:
+  git-version:
+    cmds:
+      - go run {{.CURRENT_DIR}}/cmd/version/main.go {{.CLI_ARGS}}
+
+  dc:
+    cmds:
+      - docker-compose -f {{.CURRENT_DIR}}/docker-compose.yaml {{.CLI_ARGS}}
+
+  run-etcd:
+    cmds:
+      - LOG_LEVEL=trace go run {{.CURRENT_DIR}}/cmd/etcd-example/main.go -c {{.CURRENT_DIR}}/config.yaml

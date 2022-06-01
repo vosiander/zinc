@@ -143,7 +143,7 @@ func (c *Core) WithAllPlugins(config AllPluginConfig) *Core {
 	c.Register(telegram.New().Boot(config.Telegram, l, um).(*telegram.Plugin))
 	c.Register(s3file.New().Boot(config.S3File, l).(*s3file.Plugin))
 	c.Register(githelper.New().Boot(config.GitHelper, l).(*githelper.Plugin))
-	c.Register(etcd.New().Boot(config.Etcd, l).(*etcd.Plugin))
+	c.Register(etcd.New().Boot(config.Etcd, l, c.bp.ID).(*etcd.Plugin))
 	// c.Register(libp2p.New().Boot(config.Libp2p, l, r.Router()).(*libp2p.Plugin))
 	c.Register(p, pr, n, um, es, r)
 
