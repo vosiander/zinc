@@ -1,10 +1,6 @@
 package core
 
 import (
-	"os"
-	"sync"
-	"syscall"
-
 	"github.com/siklol/zinc/plugins"
 	"github.com/siklol/zinc/plugins/boltdb"
 	"github.com/siklol/zinc/plugins/boot"
@@ -25,11 +21,15 @@ import (
 	postgres_crud "github.com/siklol/zinc/plugins/postgres-crud"
 	"github.com/siklol/zinc/plugins/prometheus"
 	"github.com/siklol/zinc/plugins/rest"
+	"github.com/siklol/zinc/plugins/restjwt"
 	"github.com/siklol/zinc/plugins/s3file"
 	"github.com/siklol/zinc/plugins/telegram"
 	"github.com/siklol/zinc/plugins/usermanager"
 	"github.com/siklol/zinc/plugins/yamlloader"
 	"github.com/sirupsen/logrus"
+	"os"
+	"sync"
+	"syscall"
 )
 
 type (
@@ -56,6 +56,7 @@ type (
 		Logging            loglevel.Config            `yaml:"logging" json:"logging"`
 		NATS               nats.Config                `yaml:"nats" json:"nats"`
 		Etcd               etcd.Config                `yaml:"etcd" json:"etcd"`
+		RestJWT            restjwt.Config             `yaml:"restJwt" json:"restJwt"`
 		HeartbeatConsumer  heartbeat_consumer.Config  `yaml:"heartbeatConsumer" json:"heartbeatConsumer"`
 		HeartbeatPublisher heartbeat_publisher.Config `yaml:"heartbeatPublisher" json:"heartbeatPublisher"`
 		Kafka              kafka.Config               `yaml:"kafka" json:"kafka"`
@@ -144,6 +145,7 @@ func (c *Core) WithAllPlugins(config AllPluginConfig) *Core {
 	c.Register(s3file.New().Boot(config.S3File, l).(*s3file.Plugin))
 	c.Register(githelper.New().Boot(config.GitHelper, l).(*githelper.Plugin))
 	c.Register(etcd.New().Boot(config.Etcd, l, c.bp.ID).(*etcd.Plugin))
+	c.Register(restjwt.New().Boot(config.RestJWT, l).(*restjwt.Plugin))
 	// c.Register(libp2p.New().Boot(config.Libp2p, l, r.Router()).(*libp2p.Plugin))
 	c.Register(p, pr, n, um, es, r)
 
