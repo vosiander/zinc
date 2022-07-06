@@ -2,6 +2,7 @@ package loglevel
 
 import (
 	"os"
+	"strings"
 
 	"github.com/siklol/zinc/plugins"
 	log "github.com/sirupsen/logrus"
@@ -9,13 +10,14 @@ import (
 
 type (
 	Plugin struct {
-		conf Config
+		conf    Config
+		logFile *os.File
 	}
 
 	Config struct {
-		LogLevel   string `env:"LOG_LEVEL" default:"INFO" yaml:"logLevel"`
-		Output     string `env:"LOG_OUTPUT" yaml:"output"` // possible variables: file
-		OutputFile string `env:"LOG_OUTPUT_FILE" yaml:"outputFile"`
+		LogLevel  string `env:"LOG_LEVEL" default:"INFO" yaml:"logLevel"`
+		LogFile   string `env:"LOG_FILE" yaml:"logFile"`
+		LogFormat string `env:"LOG_FORMAT" yaml:"logFormat"`
 	}
 )
 
@@ -31,7 +33,22 @@ func (p *Plugin) Name() string {
 
 func (p *Plugin) Start() error {
 	setLogLevel(p.conf.LogLevel)
-	switchLoggingOutput(p.conf)
+
+	if strings.ToLower(p.conf.LogFormat) == "json" {
+		log.SetFormatter(&log.JSONFormatter{})
+	}
+
+	if p.conf.LogFile == "" {
+		return nil
+	}
+
+	f, err := os.OpenFile(p.conf.LogFile, os.O_WRONLY|os.O_CREATE, 0755)
+	if err != nil {
+		log.WithError(err).Fatal("could not open log file")
+	}
+
+	p.logFile = f
+	log.SetOutput(p.logFile)
 	return nil
 }
 
@@ -42,10 +59,13 @@ func (p *Plugin) Boot(conf interface{}, dependencies ...interface{}) plugins.Plu
 }
 
 func (p *Plugin) Close() error {
+	if p.logFile != nil {
+		p.logFile.Close()
+	}
 	return nil
 }
 
-func (bp *Plugin) IsEnabled() bool {
+func (p *Plugin) IsEnabled() bool {
 	return true
 }
 
@@ -56,16 +76,4 @@ func setLogLevel(logLevel string) {
 			log.SetLevel(lvl)
 		}
 	}
-}
-
-func switchLoggingOutput(conf Config) {
-	if conf.Output == "" {
-		return
-	}
-
-	f, err := os.OpenFile(conf.OutputFile, os.O_WRONLY|os.O_CREATE, 0755)
-	if err != nil {
-		log.WithError(err).Fatal("could not open log file")
-	}
-	log.SetOutput(f)
 }

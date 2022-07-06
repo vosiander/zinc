@@ -8,9 +8,9 @@ vars:
   CURRENT_DIR: { sh: pwd }
 
 tasks:
-  git-version:
+  version:
     cmds:
-      - go run {{.CURRENT_DIR}}/cmd/version/main.go {{.CLI_ARGS}}
+      - versioner {{.CLI_ARGS}}
 
   dc:
     cmds:
