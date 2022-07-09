@@ -143,7 +143,11 @@ func (tx *Transaction) Find(id string, target any) error {
 	return nil
 }
 
-func (tx *Transaction) Query(qsql string, params ...any) *sqlx.Row {
+func (tx *Transaction) FindBy(condition string, params ...any) (*sqlx.Rows, error) {
+	return tx.db.Queryx(fmt.Sprintf("SELECT data from %s where "+condition, tx.table), params...) //
+}
+
+func (tx *Transaction) QueryRow(qsql string, params ...any) *sqlx.Row {
 	return tx.db.QueryRowx(fmt.Sprintf(qsql, tx.table), params...) //
 }
 
