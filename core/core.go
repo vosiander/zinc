@@ -186,7 +186,7 @@ func (c *Core) Register(plugins ...plugins.Plugin) *Core {
 func (c *Core) CLI(f func()) {
 	l := c.Logger()
 
-	c.MustGet(clidaemon.Name).(*clidaemon.Plugin).RunCLI(func() {
+	go c.MustGet(clidaemon.Name).(*clidaemon.Plugin).RunCLI(func() {
 		defer func() { c.SendSigIntSignal() }()
 
 		f()

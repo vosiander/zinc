@@ -83,6 +83,11 @@ func (p *Plugin) EnableMetrics(metrics MetricsWriter) {
 }
 
 func (p *Plugin) ReadFromTopic(topic string, consumerGroupID string, messageC chan kafka.Message) {
+	ctx := context.Background()
+	p.ReadFromTopicWithContext(ctx, topic, consumerGroupID, messageC)
+}
+
+func (p *Plugin) ReadFromTopicWithContext(ctx context.Context, topic string, consumerGroupID string, messageC chan kafka.Message) {
 	l := p.logger.WithField("component", "kafka-reader-messages")
 
 	if !p.conf.Enable {
@@ -101,34 +106,38 @@ func (p *Plugin) ReadFromTopic(topic string, consumerGroupID string, messageC ch
 
 	l.Debug("starting reading kafka messages routine")
 
-	ctx := context.Background()
 	for {
-		m, err := kr.FetchMessage(ctx)
-		if err != nil {
-			l.WithError(err).Error("error fetching kafka message")
-			break // TODO restart reading?
+		select {
+		case <-ctx.Done():
+			l.Trace("finished reading kafka messages...")
+
+			return
+		default:
+			m, err := kr.FetchMessage(ctx)
+			if err != nil {
+				l.WithError(err).Error("error fetching kafka message")
+				break // TODO restart reading?
+			}
+			l.WithFields(logrus.Fields{
+				"Topic":     m.Topic,
+				"Partition": m.Partition,
+				"Offset":    m.Offset,
+				"Key":       string(m.Key),
+				"Value":     string(m.Value),
+			}).Trace("message received") // TODO trace?
+
+			messageC <- m
+
+			if err := kr.CommitMessages(ctx, m); err != nil {
+				l.WithField("message", m).WithError(err).Error("could not commit messge!")
+				p.metrics.AddCounter("kafka_"+topic+"_failure", 1.0, fmt.Sprintf("kafka [%s] failure message count", topic))
+				continue
+			}
+
+			p.metrics.AddCounter("kafka_"+topic+"_success", 1.0, fmt.Sprintf("kafka [%s] successfull message count", topic))
+			l.Trace("message commited")
 		}
-		l.WithFields(logrus.Fields{
-			"Topic":     m.Topic,
-			"Partition": m.Partition,
-			"Offset":    m.Offset,
-			"Key":       string(m.Key),
-			"Value":     string(m.Value),
-		}).Trace("message received") // TODO trace?
-
-		messageC <- m
-
-		if err := kr.CommitMessages(ctx, m); err != nil {
-			l.WithField("message", m).WithError(err).Error("could not commit messge!")
-			p.metrics.AddCounter("kafka_"+topic+"_failure", 1.0, fmt.Sprintf("kafka [%s] failure message count", topic))
-			continue
-		}
-
-		p.metrics.AddCounter("kafka_"+topic+"_success", 1.0, fmt.Sprintf("kafka [%s] successfull message count", topic))
-		l.Trace("message commited")
 	}
-
-	l.Trace("finished reading kafka messages...")
 }
 
 func (p *Plugin) WriteToTopic(topic string, key string, value string) error {
