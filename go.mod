@@ -6,6 +6,8 @@ require (
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/caarlos0/env/v6 v6.9.1
 	github.com/creasty/defaults v1.5.2
+	github.com/denisbrodbeck/machineid v1.0.1
+	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golang-migrate/migrate/v4 v4.15.1
 	github.com/google/uuid v1.3.0
 	github.com/jessevdk/go-flags v1.5.0
@@ -48,7 +50,6 @@ require (
 	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/gopacket v1.1.19 // indirect

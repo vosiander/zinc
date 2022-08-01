@@ -1,6 +1,7 @@
 package core
 
 import (
+	"github.com/denisbrodbeck/machineid"
 	"github.com/siklol/zinc/plugins"
 	"github.com/siklol/zinc/plugins/boltdb"
 	"github.com/siklol/zinc/plugins/boot"
@@ -173,6 +174,10 @@ func (c *Core) SetLogLevel(conf loglevel.Config) *Core {
 	loglevel.New().Boot(conf).Start()
 	c.logger = logrus.WithField("component", "core")
 	return c
+}
+
+func (c *Core) MachineID() (string, error) {
+	return machineid.ID()
 }
 
 func (c *Core) Register(plugins ...plugins.Plugin) *Core {
