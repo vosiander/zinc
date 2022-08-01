@@ -3,6 +3,7 @@ package kafka
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/segmentio/kafka-go"
@@ -82,12 +83,12 @@ func (p *Plugin) EnableMetrics(metrics MetricsWriter) {
 	p.metrics = metrics
 }
 
-func (p *Plugin) ReadFromTopic(topic string, consumerGroupID string, messageC chan kafka.Message) {
+func (p *Plugin) ReadFromTopic(topic string, consumerGroupID string, messageC chan<- kafka.Message) {
 	ctx := context.Background()
 	p.ReadFromTopicWithContext(ctx, topic, consumerGroupID, messageC)
 }
 
-func (p *Plugin) ReadFromTopicWithContext(ctx context.Context, topic string, consumerGroupID string, messageC chan kafka.Message) {
+func (p *Plugin) ReadFromTopicWithContext(ctx context.Context, topic string, consumerGroupID string, messageC chan<- kafka.Message) {
 	l := p.logger.WithField("component", "kafka-reader-messages")
 
 	if !p.conf.Enable {
@@ -114,7 +115,10 @@ func (p *Plugin) ReadFromTopicWithContext(ctx context.Context, topic string, con
 			return
 		default:
 			m, err := kr.FetchMessage(ctx)
-			if err != nil {
+			if err != nil && err == io.EOF {
+				l.WithError(err).Warn("reader has been closed")
+				return
+			} else if err != nil {
 				l.WithError(err).Error("error fetching kafka message")
 				break // TODO restart reading?
 			}
