@@ -188,16 +188,44 @@ func (c *Core) Register(plugins ...plugins.Plugin) *Core {
 	return c
 }
 
-func (c *Core) CLI(f func()) {
+func (c *Core) CLI(f any) {
 	l := c.Logger()
+	cli := c.MustGet(clidaemon.Name).(*clidaemon.Plugin)
+	defer func() { c.SendSigIntSignal() }()
 
-	go c.MustGet(clidaemon.Name).(*clidaemon.Plugin).RunCLI(func() {
+	cliMap := map[string]func(){}
+	switch f.(type) {
+	case func():
+		cliMap["default"] = f.(func())
+	case map[string]func():
+		cliMap = f.(map[string]func())
+	default:
+		l.Fatal("invalid cli input type given. should be either func() or map[string]func().")
+	}
+
+	for arg, cliF := range cliMap {
+		cli.Register(arg, cliF)
+	}
+
+	go cli.Run()
+	go c.Shutdown(func() {})
+	<-c.WaitOnCleanup()
+	l.Info("done")
+}
+
+func (c *Core) CLINamed(f func()) {
+	l := c.Logger()
+	cli := c.MustGet(clidaemon.Name).(*clidaemon.Plugin)
+
+	cli.Register("default", func() {
 		defer func() { c.SendSigIntSignal() }()
 
 		f()
 
 		l.Info("done")
 	})
+
+	go cli.Run()
 	go c.Shutdown(func() {})
 	<-c.WaitOnCleanup()
 }

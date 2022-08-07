@@ -5,12 +5,16 @@ import (
 	_ "github.com/jessevdk/go-flags"
 	"github.com/siklol/zinc/plugins"
 	"github.com/sirupsen/logrus"
+	"os"
 )
 
 type (
+	CliFunc func()
+
 	Plugin struct {
-		logger *logrus.Entry
-		conf   Config
+		logger   *logrus.Entry
+		conf     Config
+		cliFuncs map[string]CliFunc
 	}
 
 	Config struct {
@@ -26,7 +30,9 @@ type (
 const Name = "clidaemon"
 
 func New() *Plugin {
-	return &Plugin{}
+	return &Plugin{
+		cliFuncs: map[string]CliFunc{},
+	}
 }
 
 func (cliD *Plugin) Name() string {
@@ -62,7 +68,26 @@ func (cliD *Plugin) Start() error {
 	return nil
 }
 
-func (cliD *Plugin) RunCLI(f func()) error {
+func (cliD *Plugin) Register(arg string, f CliFunc) {
+	cliD.cliFuncs[arg] = f
+}
+
+func (cliD *Plugin) Run() error {
+	first := "default"
+	if len(os.Args) >= 2 {
+		first = os.Args[1]
+	}
+
+	if len(first) > 0 && first[0:1] == "-" && len(cliD.cliFuncs) == 1 {
+		first = "default"
+	}
+
+	f, isOK := cliD.cliFuncs[first]
+	if !isOK {
+		cliD.logger.Fatalf("missing cli func: %s", first)
+	}
+
 	f()
+
 	return nil
 }
