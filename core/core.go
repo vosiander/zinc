@@ -204,7 +204,13 @@ func (c *Core) CLI(f any) {
 	}
 
 	for arg, cliF := range cliMap {
-		cli.Register(arg, cliF)
+		cli.Register(arg, func() {
+			defer func() { c.SendSigIntSignal() }()
+
+			cliF()
+
+			l.Info("done")
+		})
 	}
 
 	go cli.Run()
