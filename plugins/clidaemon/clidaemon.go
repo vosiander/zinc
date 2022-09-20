@@ -12,9 +12,10 @@ type (
 	CliFunc func()
 
 	Plugin struct {
-		logger   *logrus.Entry
-		conf     Config
-		cliFuncs map[string]CliFunc
+		logger       *logrus.Entry
+		conf         Config
+		cliFuncs     map[string]CliFunc
+		shutdownFunc func()
 	}
 
 	Config struct {
@@ -40,6 +41,7 @@ func (cliD *Plugin) Name() string {
 }
 
 func (cliD *Plugin) Boot(conf interface{}, dependencies ...interface{}) plugins.Plugin {
+	cliD.shutdownFunc = func() {}
 	for _, d := range dependencies {
 		if dp, isOk := d.(*logrus.Entry); isOk {
 			cliD.logger = dp.WithField("component", "cli-daeemon")
@@ -72,6 +74,10 @@ func (cliD *Plugin) Register(arg string, f CliFunc) {
 	cliD.cliFuncs[arg] = f
 }
 
+func (cliD *Plugin) Shutdown(f func()) {
+	cliD.shutdownFunc = f
+}
+
 func (cliD *Plugin) Run() error {
 	first := "default"
 	if len(os.Args) >= 2 {
@@ -88,6 +94,7 @@ func (cliD *Plugin) Run() error {
 	}
 
 	f()
+	cliD.shutdownFunc()
 
 	return nil
 }

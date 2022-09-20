@@ -203,14 +203,12 @@ func (c *Core) CLI(f any) {
 		l.Fatal("invalid cli input type given. should be either func() or map[string]func().")
 	}
 
+	cli.Shutdown(func() {
+		defer func() { c.SendSigIntSignal() }()
+	})
+
 	for arg, cliF := range cliMap {
-		cli.Register(arg, func() {
-			defer func() { c.SendSigIntSignal() }()
-
-			cliF()
-
-			l.Info("done")
-		})
+		cli.Register(arg, cliF)
 	}
 
 	go cli.Run()
@@ -220,16 +218,13 @@ func (c *Core) CLI(f any) {
 }
 
 func (c *Core) CLINamed(f func()) {
-	l := c.Logger()
 	cli := c.MustGet(clidaemon.Name).(*clidaemon.Plugin)
 
-	cli.Register("default", func() {
+	cli.Shutdown(func() {
 		defer func() { c.SendSigIntSignal() }()
-
-		f()
-
-		l.Info("done")
 	})
+
+	cli.Register("default", f)
 
 	go cli.Run()
 	go c.Shutdown(func() {})
