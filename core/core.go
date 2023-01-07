@@ -1,6 +1,10 @@
 package core
 
 import (
+	"os"
+	"sync"
+	"syscall"
+
 	"github.com/denisbrodbeck/machineid"
 	"github.com/siklol/zinc/plugins"
 	"github.com/siklol/zinc/plugins/boltdb"
@@ -28,19 +32,17 @@ import (
 	"github.com/siklol/zinc/plugins/usermanager"
 	"github.com/siklol/zinc/plugins/yamlloader"
 	"github.com/sirupsen/logrus"
-	"os"
-	"sync"
-	"syscall"
 )
 
 type (
 	Core struct {
-		logger  *logrus.Entry
-		plugins map[string]plugins.Plugin
-		bp      *boot.Plugin
-		yl      *yamlloader.Plugin
-		cl      *configurator.Plugin
-		cliD    *clidaemon.Plugin
+		logger          *logrus.Entry
+		plugins         map[string]plugins.Plugin
+		bp              *boot.Plugin
+		yl              *yamlloader.Plugin
+		cl              *configurator.Plugin
+		cliD            *clidaemon.Plugin
+		cliShutdownFunc func()
 	}
 
 	MinimalPluginConfig struct {
@@ -95,6 +97,9 @@ func NewCore(bootConf interface{}, flags interface{}) *Core {
 		cliD:    clidaemon.New().Boot(nil, l).(*clidaemon.Plugin),
 		logger:  l,
 		plugins: map[string]plugins.Plugin{},
+		cliShutdownFunc: func() {
+			l.Debug("shutting down...")
+		},
 	}
 
 	if _, err := c.cliD.ParseFlags(flags, os.Args); err != nil {
@@ -203,32 +208,14 @@ func (c *Core) CLI(f any) {
 		l.Fatal("invalid cli input type given. should be either func() or map[string]func().")
 	}
 
-	cli.Shutdown(func() {
-		defer func() { c.SendSigIntSignal() }()
-	})
-
 	for arg, cliF := range cliMap {
 		cli.Register(arg, cliF)
 	}
 
 	go cli.Run()
-	go c.Shutdown(func() {})
+	go c.Shutdown(c.cliShutdownFunc)
 	<-c.WaitOnCleanup()
-	l.Info("done")
-}
-
-func (c *Core) CLINamed(f func()) {
-	cli := c.MustGet(clidaemon.Name).(*clidaemon.Plugin)
-
-	cli.Shutdown(func() {
-		defer func() { c.SendSigIntSignal() }()
-	})
-
-	cli.Register("default", f)
-
-	go cli.Run()
-	go c.Shutdown(func() {})
-	<-c.WaitOnCleanup()
+	l.Info("exiting")
 }
 
 func (c *Core) CustomConfig(name string, conf interface{}) {
@@ -296,12 +283,14 @@ func (c *Core) Shutdown(f func()) {
 		case event := <-c.bp.SignalChan:
 			l := c.logger.WithField("component", "shutdown")
 			l.Infof("Received %s event...", event)
-			c.close()
 
 			f()
+			c.close()
 
-			l.Info("finished shutdown")
+			l.Trace("pre-cleanup shutdown chan")
 			c.bp.CleanupDone <- true
+			l.Info("finished shutdown")
+
 			return
 		}
 	}

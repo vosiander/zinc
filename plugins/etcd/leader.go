@@ -2,10 +2,11 @@ package etcd
 
 import (
 	"context"
+	"time"
+
 	"github.com/sirupsen/logrus"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/concurrency"
-	"time"
 )
 
 type (
@@ -47,11 +48,11 @@ func NewLeader(e *clientv3.Client, l logrus.FieldLogger, serviceID string, opts 
 
 func (lead *Leader) Close() error {
 	if err := lead.election.Resign(lead.ctx); err != nil {
-		lead.logger.Warn("error resigning leader from election")
+		lead.logger.WithError(err).Warn("error resigning leader from election")
 	}
 
 	if err := lead.session.Close(); err != nil {
-		lead.logger.Warn("error closing etcd session")
+		lead.logger.WithError(err).Warn("error closing etcd session")
 	}
 
 	return nil

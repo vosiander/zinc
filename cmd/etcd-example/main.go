@@ -1,9 +1,10 @@
 package main
 
 import (
+	"time"
+
 	"github.com/siklol/zinc/core"
 	"github.com/siklol/zinc/plugins/etcd"
-	"time"
 )
 
 type (
@@ -24,8 +25,14 @@ var (
 )
 
 func main() {
+	shutdownChan := make(chan bool)
 	c := core.NewCore(&conf, &cliOpts).
-		WithOptions(&conf, core.LoadYamlConfig(cliOpts.ConfigFile)).
+		WithOptions(&conf,
+			core.LoadYamlConfig(cliOpts.ConfigFile),
+			core.CLIShutdownFunc(func() {
+				shutdownChan <- true
+			}),
+		).
 		WithAllPlugins(conf.Core)
 
 	l := c.Logger()
@@ -44,6 +51,9 @@ func main() {
 		go func() {
 			for {
 				select {
+				case <-shutdownChan:
+					l.Warn("closing etcd loop")
+					return
 				case <-t:
 					if lead.IsLeader() {
 						l.Debug("--- leader")
@@ -55,8 +65,4 @@ func main() {
 		}()
 
 	})
-	go c.Shutdown(func() {
-	})
-
-	<-c.WaitOnCleanup()
 }

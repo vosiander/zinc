@@ -32,3 +32,10 @@ func LoadConfigurator(service string, url string) Option {
 		return nil
 	}
 }
+
+func CLIShutdownFunc(f func()) Option {
+	return func(c *Core, conf interface{}) error {
+		c.cliShutdownFunc = f
+		return nil
+	}
+}
