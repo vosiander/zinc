@@ -6,7 +6,7 @@ import (
 	"github.com/siklol/zinc/plugins"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
-	tb "gopkg.in/tucnak/telebot.v2"
+	tb "gopkg.in/telebot.v3"
 )
 
 const Name = "telegram"

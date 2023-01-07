@@ -8,14 +8,13 @@ import (
 	kafka "github.com/segmentio/kafka-go"
 	"github.com/siklol/zinc/core"
 	"github.com/siklol/zinc/plugins/boltdb"
-	"github.com/siklol/zinc/plugins/clidaemon"
 	kafkaPlugin "github.com/siklol/zinc/plugins/kafka"
 	postgres_crud "github.com/siklol/zinc/plugins/postgres-crud"
 	"github.com/siklol/zinc/plugins/telegram"
 	"github.com/siklol/zinc/plugins/usermanager"
 	"github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
-	tb "gopkg.in/tucnak/telebot.v2"
+	tb "gopkg.in/telebot.v3"
 )
 
 type (
@@ -48,7 +47,8 @@ func main() {
 	l := c.Logger()
 	b := c.MustGet(telegram.Name).(*telegram.Plugin).Bot()
 	um := c.MustGet(usermanager.Name).(*usermanager.Plugin)
-	b.Handle("/fe", func(m *tb.Message) {
+	b.Handle("/fe", func(c tb.Context) error {
+		m := c.Message()
 		um.RegisterUser(
 			strconv.FormatInt(m.Sender.ID, 10),
 			m.Sender.FirstName,
@@ -56,16 +56,19 @@ func main() {
 			m.Sender.Username,
 		)
 		b.Send(m.Sender, "events followed")
+		return nil
 	})
-	b.Handle("/ue", func(m *tb.Message) {
+	b.Handle("/ue", func(c tb.Context) error {
+		m := c.Message()
 		if err := um.Delete(strconv.FormatInt(m.Sender.ID, 10)); err != nil {
 			l.WithError(err).Warn("error deleting telegram user from db")
 		}
 		b.Send(m.Sender, "events unfollowed")
+		return nil
 	})
 
 	c.StartPlugins()
-	c.MustGet(clidaemon.Name).(*clidaemon.Plugin).RunCLI(func() {
+	c.CLI(func() {
 		go writeKafka(c)
 		go readKafka(c)
 	})

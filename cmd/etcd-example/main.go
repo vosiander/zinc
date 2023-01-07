@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/siklol/zinc/core"
-	"github.com/siklol/zinc/plugins/clidaemon"
 	"github.com/siklol/zinc/plugins/etcd"
 	"time"
 )
@@ -33,7 +32,7 @@ func main() {
 	etcdP := c.MustGet(etcd.Name).(*etcd.Plugin)
 
 	c.StartPlugins()
-	c.MustGet(clidaemon.Name).(*clidaemon.Plugin).RunCLI(func() {
+	c.CLI(func() {
 		l.Debug("started")
 		lead := etcdP.Leader()
 
