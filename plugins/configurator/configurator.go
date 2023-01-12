@@ -2,8 +2,9 @@ package configurator
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/creasty/defaults"
@@ -67,7 +68,12 @@ func (bp *Plugin) LoadConfig(url string, name string, conf interface{}) error {
 	}
 	l.WithField("code", resp.StatusCode).Trace("status code from config service")
 
-	data, err := ioutil.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		l.WithField("statuscode", resp.StatusCode).Debug("configurator config retreival failed.")
+		return errors.New("configurator config retrieval failed")
+	}
+
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}

@@ -14,7 +14,7 @@ type (
 	}
 
 	CLIOptions struct {
-		ConfigFile      string `short:"c" long:"config" description:"config file" default:"config.yaml"`
+		ConfigFile      string `short:"c" long:"config" description:"config file" default:""`
 		ConfiguratorURL string `short:"u" long:"configurator" description:"Configurator URL" default:"https://config.example.com"`
 	}
 )
@@ -28,17 +28,14 @@ func main() {
 	shutdownChan := make(chan bool)
 	c := core.NewCore(&conf, &cliOpts).
 		WithOptions(&conf,
-			core.LoadYamlConfig(cliOpts.ConfigFile),
-			core.CLIShutdownFunc(func() {
-				shutdownChan <- true
-			}),
+			core.LoadConfigFromEnvironment(cliOpts.ConfigFile, "etcd-example", cliOpts.ConfiguratorURL),
+			core.CLIShutdownFunc(func() { shutdownChan <- true }),
 		).
 		WithAllPlugins(conf.Core)
 
 	l := c.Logger()
 	etcdP := c.MustGet(etcd.Name).(*etcd.Plugin)
 
-	c.StartPlugins()
 	c.CLI(func() {
 		l.Debug("started")
 		lead := etcdP.Leader()
@@ -63,6 +60,5 @@ func main() {
 				}
 			}
 		}()
-
 	})
 }
