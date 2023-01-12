@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/siklol/zinc/cmd/eventstore/aggregate"
 	"github.com/siklol/zinc/core"
-	"github.com/siklol/zinc/plugins/clidaemon"
 	"github.com/siklol/zinc/plugins/eventstore"
 	"github.com/siklol/zinc/plugins/eventstore/eventsourcing"
 	"github.com/sirupsen/logrus"
@@ -33,8 +32,7 @@ func main() {
 
 	l := c.Logger()
 
-	c.StartPlugins()
-	c.MustGet(clidaemon.Name).(*clidaemon.Plugin).RunCLI(func() {
+	c.CLI(func() {
 		defer func() { c.SendSigIntSignal() }()
 		esP := c.MustGet(eventstore.Name).(*eventstore.Plugin)
 
@@ -58,9 +56,6 @@ func main() {
 
 		l.Info("done")
 	})
-	go c.Shutdown(func() {})
-
-	<-c.WaitOnCleanup()
 }
 
 func err(l logrus.FieldLogger, err error) {

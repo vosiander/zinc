@@ -29,8 +29,10 @@ require (
 	github.com/segmentio/kafka-go v0.4.27
 	github.com/siklol/heartbeat v0.0.9
 	github.com/sirupsen/logrus v1.8.1
+	github.com/yargevad/filepathx v1.0.0
 	go.etcd.io/bbolt v1.3.6
 	go.etcd.io/etcd/client/v3 v3.5.4
+	golang.org/x/mod v0.4.2
 	gopkg.in/telebot.v3 v3.1.2
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -158,7 +160,6 @@ require (
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.19.0 // indirect
 	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4 // indirect
-	golang.org/x/mod v0.4.2 // indirect
 	golang.org/x/net v0.0.0-20220520000938-2e3eb7b945c2 // indirect
 	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29 // indirect
 	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect

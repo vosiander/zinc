@@ -67,14 +67,10 @@ func main() {
 		return nil
 	})
 
-	c.StartPlugins()
 	c.CLI(func() {
 		go writeKafka(c)
 		go readKafka(c)
 	})
-	go c.Shutdown(func() {})
-
-	<-c.WaitOnCleanup()
 }
 
 func writeKafka(c *core.Core) {

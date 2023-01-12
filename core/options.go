@@ -36,6 +36,18 @@ func LoadConfigFromEnvironment(yamlFile string, service string, url string) Opti
 	}
 }
 
+func LoadOptionalYamlConfig(filename string) Option {
+	return func(c *Core, conf interface{}) error {
+		l := c.Logger().WithField("component", "LoadFromYamlConfig")
+
+		if err := c.yl.LoadYamlConfig(filename, conf); err != nil {
+			l.WithError(err).Warn("error loading yaml config. Ignoring...")
+		}
+		l.Tracef("%#v", conf)
+		return nil
+	}
+}
+
 func LoadYamlConfig(filename string) Option {
 	return func(c *Core, conf interface{}) error {
 		l := c.Logger().WithField("component", "LoadFromYamlConfig")
