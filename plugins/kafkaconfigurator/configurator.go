@@ -15,7 +15,7 @@ import (
 
 const (
 	Name          = "kafkaconfigurator"
-	configTimeout = 30 * time.Second
+	configTimeout = 15 * time.Second
 )
 
 type (
