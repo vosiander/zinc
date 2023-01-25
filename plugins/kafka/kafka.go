@@ -83,12 +83,12 @@ func (p *Plugin) EnableMetrics(metrics MetricsWriter) {
 	p.metrics = metrics
 }
 
-func (p *Plugin) ReadFromTopic(topic string, consumerGroupID string, messageC chan<- kafka.Message) {
+func (p *Plugin) ReadFromTopic(topic string, consumerGroupID string, messageC chan<- Message) {
 	ctx := context.Background()
 	p.ReadFromTopicWithContext(ctx, topic, consumerGroupID, messageC)
 }
 
-func (p *Plugin) ReadFromTopicWithContext(ctx context.Context, topic string, consumerGroupID string, messageC chan<- kafka.Message) {
+func (p *Plugin) ReadFromTopicWithContext(ctx context.Context, topic string, consumerGroupID string, messageC chan<- Message) {
 	l := p.logger.WithField("component", "kafka-reader-messages")
 
 	if !p.conf.Enable {
@@ -130,7 +130,15 @@ func (p *Plugin) ReadFromTopicWithContext(ctx context.Context, topic string, con
 				"Value":     string(m.Value),
 			}).Trace("message received") // TODO trace?
 
-			messageC <- m
+			messageC <- Message{
+				Topic:         m.Topic,
+				Partition:     m.Partition,
+				Offset:        m.Offset,
+				HighWaterMark: m.HighWaterMark,
+				Key:           m.Key,
+				Value:         m.Value,
+				Time:          m.Time,
+			}
 
 			if err := kr.CommitMessages(ctx, m); err != nil {
 				l.WithField("message", m).WithError(err).Error("could not commit messge!")

@@ -5,6 +5,8 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/siklol/zinc/plugins/kafkaconfigurator"
+
 	"github.com/denisbrodbeck/machineid"
 	"github.com/siklol/zinc/plugins"
 	"github.com/siklol/zinc/plugins/boltdb"
@@ -41,6 +43,7 @@ type (
 		bp              *boot.Plugin
 		yl              *yamlloader.Plugin
 		cl              *configurator.Plugin
+		kcl             *kafkaconfigurator.Plugin
 		cliD            *clidaemon.Plugin
 		cliShutdownFunc func()
 	}
@@ -94,6 +97,7 @@ func NewCore(bootConf interface{}, flags interface{}) *Core {
 		bp:      boot.New().Boot(bootConf).(*boot.Plugin),
 		yl:      yamlloader.New().Boot(bootConf).(*yamlloader.Plugin),
 		cl:      configurator.New().Boot(bootConf).(*configurator.Plugin),
+		kcl:     kafkaconfigurator.New().Boot(bootConf).(*kafkaconfigurator.Plugin),
 		cliD:    clidaemon.New().Boot(nil, l).(*clidaemon.Plugin),
 		logger:  l,
 		plugins: map[string]plugins.Plugin{},
@@ -135,8 +139,9 @@ func (c *Core) WithAllPlugins(config AllPluginConfig) *Core {
 	l := c.Logger()
 	c.Register(c.yl, c.cl, c.cliD)
 
-	p := postgres.New().Boot(config.Postgres, l).(*postgres.Plugin)
 	pr := prometheus.New().Boot(config.Prometheus, l).(*prometheus.Plugin)
+	k := kafka.New().Boot(config.Kafka, l, pr).(*kafka.Plugin)
+	p := postgres.New().Boot(config.Postgres, l).(*postgres.Plugin)
 	n := nats.New().Boot(config.NATS, l).(*nats.Plugin)
 	um := usermanager.New().Boot(config.Usermanager, l, p).(*usermanager.Plugin)
 	es := eventstore.New().Boot(config.EventStore, l).(*eventstore.Plugin)
@@ -144,7 +149,6 @@ func (c *Core) WithAllPlugins(config AllPluginConfig) *Core {
 
 	c.Register(boltdb.New().Boot(config.BoltDB, l).(*boltdb.Plugin))
 	c.Register(postgres_crud.New().Boot(config.PostgresCrud, l, p).(*postgres_crud.Plugin))
-	c.Register(kafka.New().Boot(config.Kafka, l, pr).(*kafka.Plugin))
 	c.Register(heartbeat_consumer.New().Boot(config.HeartbeatConsumer, c.bp.ID, l, n).(*heartbeat_consumer.Plugin))
 	c.Register(heartbeat_publisher.New().Boot(config.HeartbeatPublisher, c.bp.ID, l, n).(*heartbeat_publisher.Plugin))
 	c.Register(telegram.New().Boot(config.Telegram, l, um).(*telegram.Plugin))
@@ -153,7 +157,7 @@ func (c *Core) WithAllPlugins(config AllPluginConfig) *Core {
 	c.Register(etcd.New().Boot(config.Etcd, l, c.bp.ID).(*etcd.Plugin))
 	c.Register(restjwt.New().Boot(config.RestJWT, l).(*restjwt.Plugin))
 	// c.Register(libp2p.New().Boot(config.Libp2p, l, r.Router()).(*libp2p.Plugin))
-	c.Register(p, pr, n, um, es, r)
+	c.Register(p, pr, n, um, es, r, k)
 
 	if es.IsEnabled() {
 		storages := []eventsourcing.Storage{}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/siklol/zinc/core"
@@ -14,24 +15,25 @@ type (
 	}
 
 	CLIOptions struct {
-		ConfigFile      string `short:"c" long:"config" description:"config file" default:""`
-		ConfiguratorURL string `short:"u" long:"configurator" description:"Configurator URL" default:"https://config.example.com"`
+		ConfigFile          string `short:"c" long:"config" description:"config file" default:""`
+		ConfiguratorBrokers string `short:"b" long:"brokers" default:"localhost:9093"`
 	}
 )
 
 var (
 	conf    Config
 	cliOpts CLIOptions
+	c       *core.Core
 )
 
 func main() {
 	shutdownChan := make(chan bool)
-	c := core.NewCore(&conf, &cliOpts).
-		WithOptions(&conf,
-			core.LoadConfigFromEnvironment(cliOpts.ConfigFile, "etcd-example", cliOpts.ConfiguratorURL),
-			core.CLIShutdownFunc(func() { shutdownChan <- true }),
-		).
-		WithAllPlugins(conf.Core)
+	c = core.NewCore(&conf, &cliOpts)
+	c.WithOptions(&conf,
+		core.LoadKafkaConfigurator(cliOpts.ConfiguratorBrokers, "etcd-example", func(cfg string) error { return json.Unmarshal([]byte(cfg), &conf) }),
+		core.CLIShutdownFunc(func() { shutdownChan <- true }),
+	)
+	c.WithAllPlugins(conf.Core)
 
 	l := c.Logger()
 	etcdP := c.MustGet(etcd.Name).(*etcd.Plugin)

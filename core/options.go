@@ -1,7 +1,10 @@
 package core
 
+import "github.com/creasty/defaults"
+
 type (
-	Option func(c *Core, conf interface{}) error
+	Option   func(c *Core, conf interface{}) error
+	UpdateFn func(cfg string) error
 )
 
 func LoadConfigFromEnvironment(yamlFile string, service string, url string) Option {
@@ -70,6 +73,22 @@ func LoadConfigurator(service string, url string) Option {
 		}
 
 		if err := c.cl.LoadConfig(url, service, conf); err != nil {
+			l.WithError(err).Fatal("error loading configurator config")
+		}
+		l.Tracef("%#v", conf)
+		return nil
+	}
+}
+
+func LoadKafkaConfigurator(brokers string, topic string, updateFn UpdateFn) Option {
+	return func(c *Core, conf interface{}) error {
+		l := c.Logger().WithField("component", "LoadConfigurator")
+
+		if err := defaults.Set(conf); err != nil {
+			panic(err)
+		}
+
+		if err := c.kcl.LoadConfig(brokers, topic, updateFn); err != nil {
 			l.WithError(err).Fatal("error loading configurator config")
 		}
 		l.Tracef("%#v", conf)

@@ -13,6 +13,16 @@ type (
 		CreatedAt time.Time `json:"created_at" yaml:"created_at"`
 		Version   string    `json:"version" yaml:"version"`
 	}
+
+	Message struct {
+		Topic         string
+		Partition     int
+		Offset        int64
+		HighWaterMark int64
+		Key           []byte
+		Value         []byte
+		Time          time.Time
+	}
 )
 
 func NewMeta(name string, version string) Meta {
