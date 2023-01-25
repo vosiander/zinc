@@ -2,6 +2,9 @@ package kafkaconfigurator
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"time"
 
 	"github.com/rs/xid"
 	"github.com/segmentio/kafka-go"
@@ -10,7 +13,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const Name = "kafkaconfigurator"
+const (
+	Name          = "kafkaconfigurator"
+	configTimeout = 30 * time.Second
+)
 
 type (
 	Plugin struct {
@@ -61,6 +67,8 @@ func (p *Plugin) LoadConfig(brokers string, topic string, updateFn func(conf str
 	go func() {
 		for {
 			select {
+			case <-time.After(configTimeout):
+				p.bootupC <- false
 			case <-p.shutdownC:
 				l.Debug("shutdown kafkaconsumer-channel")
 				return
@@ -88,9 +96,9 @@ func (p *Plugin) LoadConfig(brokers string, topic string, updateFn func(conf str
 		}
 	}()
 
-	<-p.bootupC // wait for first config message from kafka
-	l.Debug("finished loading config from kafka")
-	// todo cancel after some timeout
+	if isOk := <-p.bootupC; !isOk {
+		return errors.New(fmt.Sprintf("configuration could not be loaded after %d ms", configTimeout))
+	}
 
 	return nil
 }
