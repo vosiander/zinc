@@ -200,7 +200,6 @@ func (c *Core) Register(plugins ...plugins.Plugin) *Core {
 func (c *Core) CLI(f any) {
 	l := c.Logger()
 	cli := c.MustGet(clidaemon.Name).(*clidaemon.Plugin)
-	defer func() { c.SendSigIntSignal() }()
 
 	cliMap := map[string]func(){}
 	switch f.(type) {
@@ -216,8 +215,11 @@ func (c *Core) CLI(f any) {
 		cli.Register(arg, cliF)
 	}
 
-	go cli.Run()
 	go c.Shutdown(c.cliShutdownFunc)
+	go func() {
+		defer c.SendSigIntSignal()
+		cli.Run()
+	}()
 	<-c.WaitOnCleanup()
 	l.Info("exiting")
 }
