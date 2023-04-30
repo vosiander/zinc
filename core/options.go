@@ -1,11 +1,31 @@
 package core
 
-import "github.com/creasty/defaults"
+import (
+	"github.com/caarlos0/env/v6"
+	"github.com/creasty/defaults"
+)
 
 type (
 	Option   func(c *Core, conf interface{}) error
 	UpdateFn func(cfg string) error
 )
+
+func LoadEnv() Option {
+	return func(c *Core, conf interface{}) error {
+		l := c.Logger().WithField("component", "LoadEnv")
+
+		if err := defaults.Set(conf); err != nil {
+			l.WithError(err).Fatal("Could not load defaults")
+		}
+
+		if err := env.Parse(conf); err != nil {
+			l.WithError(err).Fatal("Could not load environment variables")
+		}
+
+		l.Trace("finished loading configs from env")
+		return nil
+	}
+}
 
 func LoadConfigFromEnvironment(yamlFile string, service string, url string) Option {
 	return func(c *Core, conf interface{}) error {
