@@ -2,19 +2,13 @@ package main
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 
-	kafka "github.com/segmentio/kafka-go"
 	"github.com/siklol/zinc/core"
 	"github.com/siklol/zinc/plugins/boltdb"
 	kafkaPlugin "github.com/siklol/zinc/plugins/kafka"
-	postgres_crud "github.com/siklol/zinc/plugins/postgres-crud"
-	"github.com/siklol/zinc/plugins/telegram"
-	"github.com/siklol/zinc/plugins/usermanager"
 	"github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
-	tb "gopkg.in/telebot.v3"
 )
 
 type (
@@ -44,32 +38,10 @@ func main() {
 		//WithOptions(&conf, core.LoadConfigurator("de.siklol-zinc.example-go-plugins", cliOpts.ConfiguratorURL)).
 		WithAllPlugins(conf.Core)
 
-	l := c.Logger()
-	b := c.MustGet(telegram.Name).(*telegram.Plugin).Bot()
-	um := c.MustGet(usermanager.Name).(*usermanager.Plugin)
-	b.Handle("/fe", func(c tb.Context) error {
-		m := c.Message()
-		um.RegisterUser(
-			strconv.FormatInt(m.Sender.ID, 10),
-			m.Sender.FirstName,
-			m.Sender.LastName,
-			m.Sender.Username,
-		)
-		b.Send(m.Sender, "events followed")
-		return nil
-	})
-	b.Handle("/ue", func(c tb.Context) error {
-		m := c.Message()
-		if err := um.Delete(strconv.FormatInt(m.Sender.ID, 10)); err != nil {
-			l.WithError(err).Warn("error deleting telegram user from db")
-		}
-		b.Send(m.Sender, "events unfollowed")
-		return nil
-	})
-
 	c.CLI(func() {
 		go writeKafka(c)
 		go readKafka(c)
+		time.Sleep(300 * time.Second)
 	})
 }
 
@@ -123,17 +95,8 @@ func writeKafka(c *core.Core) {
 func readKafka(c *core.Core) {
 	l := c.Logger()
 	k := c.MustGet(kafkaPlugin.Name).(*kafkaPlugin.Plugin)
-	b := c.MustGet(telegram.Name).(*telegram.Plugin).Bot()
-	um := c.MustGet(usermanager.Name).(*usermanager.Plugin)
-	pcrud := c.MustGet(postgres_crud.Name).(*postgres_crud.Plugin)
 
-	ch := make(chan kafka.Message, 1024)
-	tableName := "abcdefgh"
-
-	tx, err := pcrud.CreateTable(tableName)
-	if err != nil {
-		l.WithError(err).Fatal("could not create table")
-	}
+	ch := make(chan kafkaPlugin.Message, 1024)
 
 	l.Debug("readKafka starting")
 	go k.ReadFromTopic("events", "go-plugin-example-"+time.Now().Format("DMY-his"), ch)
@@ -148,38 +111,6 @@ func readKafka(c *core.Core) {
 				"Key":       string(m.Key),
 				"Value":     string(m.Value),
 			}).Debug("message received from kafka")
-
-			ma := map[string]interface{}{
-				"Topic":     m.Topic,
-				"Partition": m.Partition,
-				"Offset":    m.Offset,
-				"Key":       string(m.Key),
-				"Value":     string(m.Value),
-			}
-
-			if err := tx.Upsert(string(m.Key), ma); err != nil {
-				l.WithError(err).Warn("error persisting crud data to db")
-			}
-
-			var mb map[string]interface{}
-			if err := tx.Find(string(m.Key), &mb); err != nil {
-				l.WithError(err).Warn("error getting crud data from db")
-			}
-			l.Debugf("%#v", mb)
-
-			if err := tx.Delete(string(m.Key)); err != nil {
-				l.WithError(err).Warn("error deleting crud data from db")
-			}
-
-			telegramUsers, err := um.FindAll()
-			if err != nil {
-				l.WithError(err).Warn("could not get all telegram users from the db")
-				continue
-			}
-
-			for _, u := range telegramUsers {
-				b.Send(&Receipt{ID: u.ID}, fmt.Sprintf("message: %s %s", string(m.Key), string(m.Value)))
-			}
 		}
 	}
 }

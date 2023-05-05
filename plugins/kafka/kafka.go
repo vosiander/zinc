@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 
 	"github.com/segmentio/kafka-go"
 	"github.com/siklol/zinc/plugins"
@@ -17,6 +18,8 @@ type (
 		conf    Config
 		krs     map[string]*kafka.Reader
 		kws     map[string]*kafka.Writer
+		rMutex  *sync.RWMutex
+		wMutex  *sync.RWMutex
 		metrics MetricsWriter
 	}
 
@@ -37,8 +40,10 @@ const Name = "kafka"
 
 func New() *Plugin {
 	return &Plugin{
-		krs: map[string]*kafka.Reader{},
-		kws: map[string]*kafka.Writer{},
+		krs:    map[string]*kafka.Reader{},
+		kws:    map[string]*kafka.Writer{},
+		rMutex: &sync.RWMutex{},
+		wMutex: &sync.RWMutex{},
 	}
 }
 
@@ -96,14 +101,15 @@ func (p *Plugin) ReadFromTopicWithContext(ctx context.Context, topic string, con
 		return
 	}
 
-	if _, isOK := p.krs[topic]; !isOK {
-		p.krs[topic] = kafka.NewReader(kafka.ReaderConfig{
+	kr := p.getReader(topic)
+	if kr == nil {
+		kr = kafka.NewReader(kafka.ReaderConfig{
 			Brokers: strings.Split(p.conf.Brokers, ","),
 			GroupID: consumerGroupID,
 			Topic:   topic,
 		})
+		p.addToReaderMap(topic, kr)
 	}
-	kr := p.krs[topic]
 
 	l.Debug("starting reading kafka messages routine")
 
@@ -160,15 +166,17 @@ func (p *Plugin) WriteToTopic(topic string, key string, value string) error {
 		return nil
 	}
 
-	if _, isOK := p.kws[topic]; !isOK {
-		p.kws[topic] = &kafka.Writer{
+	kw := p.getWriter(topic)
+	if kw == nil {
+		kw = &kafka.Writer{
 			Addr:     kafka.TCP(p.conf.Brokers),
 			Topic:    topic,
 			Balancer: &kafka.LeastBytes{},
 		}
+		p.addToWriterMap(topic, kw)
 	}
 
-	err := p.kws[topic].WriteMessages(context.Background(),
+	err := kw.WriteMessages(context.Background(),
 		kafka.Message{
 			Key:   []byte(key),
 			Value: []byte(value),
@@ -202,3 +210,40 @@ func (p *Plugin) Close() error {
 }
 
 func (nmw *nullMetricsWriter) AddCounter(name string, count float64, help string) {}
+
+func (p *Plugin) addToReaderMap(topic string, reader *kafka.Reader) {
+	defer p.rMutex.Unlock()
+	p.rMutex.Lock()
+
+	p.krs[topic] = reader
+}
+
+func (p *Plugin) getReader(topic string) *kafka.Reader {
+	defer p.rMutex.RUnlock()
+	p.rMutex.RLock()
+
+	if _, isOK := p.krs[topic]; !isOK {
+		return nil
+	}
+
+	return p.krs[topic]
+}
+
+func (p *Plugin) addToWriterMap(topic string, writer *kafka.Writer) {
+	defer p.wMutex.Unlock()
+	p.wMutex.Lock()
+
+	p.kws[topic] = writer
+
+}
+
+func (p *Plugin) getWriter(topic string) *kafka.Writer {
+	defer p.wMutex.RUnlock()
+	p.wMutex.RLock()
+
+	if _, isOK := p.kws[topic]; !isOK {
+		return nil
+	}
+
+	return p.kws[topic]
+}
