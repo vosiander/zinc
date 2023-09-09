@@ -5,8 +5,6 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/siklol/zinc/plugins/kafkaconfigurator"
-
 	"github.com/denisbrodbeck/machineid"
 	"github.com/siklol/zinc/plugins"
 	"github.com/siklol/zinc/plugins/boltdb"
@@ -22,6 +20,7 @@ import (
 	heartbeat_consumer "github.com/siklol/zinc/plugins/heartbeat-consumer"
 	heartbeat_publisher "github.com/siklol/zinc/plugins/heartbeat-publisher"
 	"github.com/siklol/zinc/plugins/kafka"
+	"github.com/siklol/zinc/plugins/kafkaconfigurator"
 	"github.com/siklol/zinc/plugins/loglevel"
 	"github.com/siklol/zinc/plugins/nats"
 	"github.com/siklol/zinc/plugins/postgres"
@@ -30,6 +29,7 @@ import (
 	"github.com/siklol/zinc/plugins/rest"
 	"github.com/siklol/zinc/plugins/restjwt"
 	"github.com/siklol/zinc/plugins/s3file"
+	"github.com/siklol/zinc/plugins/slack"
 	"github.com/siklol/zinc/plugins/telegram"
 	"github.com/siklol/zinc/plugins/usermanager"
 	"github.com/siklol/zinc/plugins/yamlloader"
@@ -68,14 +68,15 @@ type (
 		Kafka              kafka.Config               `yaml:"kafka" json:"kafka"`
 		Postgres           postgres.Config            `yaml:"postgres" json:"postgres"`
 		GitHelper          githelper.Config           `yaml:"gitHelper" json:"gitHelper"`
+		PostgresCrud       postgres_crud.Config       `yaml:"postgresCrud" json:"postgresCrud"`
+		Prometheus         prometheus.Config          `yaml:"prometheus" json:"prometheus"`
+		REST               rest.Config                `yaml:"rest" json:"rest"`
+		S3File             s3file.Config              `yaml:"s3File" json:"s3File"`
+		Slack              slack.Config               `yaml:"slack" json:"slack"`
+		Telegram           telegram.Config            `yaml:"telegram" json:"telegram"`
+		Usermanager        usermanager.Config         `yaml:"usermanager" json:"usermanager"`
 		// TODO enable libp2p when ready
 		// Libp2p             libp2p.Config              `yaml:"libp2p" json:"libp2p"`
-		PostgresCrud postgres_crud.Config `yaml:"postgresCrud" json:"postgresCrud"`
-		Prometheus   prometheus.Config    `yaml:"prometheus" json:"prometheus"`
-		REST         rest.Config          `yaml:"rest" json:"rest"`
-		S3File       s3file.Config        `yaml:"s3File" json:"s3File"`
-		Telegram     telegram.Config      `yaml:"telegram" json:"telegram"`
-		Usermanager  usermanager.Config   `yaml:"usermanager" json:"usermanager"`
 	}
 )
 
@@ -153,6 +154,7 @@ func (c *Core) WithAllPlugins(config AllPluginConfig) *Core {
 	c.Register(heartbeat_publisher.New().Boot(config.HeartbeatPublisher, c.bp.ID, l, n).(*heartbeat_publisher.Plugin))
 	c.Register(telegram.New().Boot(config.Telegram, l, um).(*telegram.Plugin))
 	c.Register(s3file.New().Boot(config.S3File, l).(*s3file.Plugin))
+	c.Register(slack.New().Boot(config.Slack, l).(*slack.Plugin))
 	c.Register(githelper.New().Boot(config.GitHelper, l).(*githelper.Plugin))
 	c.Register(etcd.New().Boot(config.Etcd, l, c.bp.ID).(*etcd.Plugin))
 	c.Register(restjwt.New().Boot(config.RestJWT, l).(*restjwt.Plugin))
