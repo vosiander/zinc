@@ -191,6 +191,27 @@ func (p *Plugin) WriteToTopic(topic string, key string, value string) error {
 	return nil
 }
 
+func (p *Plugin) WriteToTopicAsync(topic string, key string, value string) {
+	l := p.logger.WithField("component", "kafka-writer-messages")
+
+	if !p.conf.Enable {
+		l.Fatal("kafka is not enabled. nothing to read from...")
+	}
+
+	kw := p.getWriter(topic)
+	if kw == nil {
+		kw = &kafka.Writer{
+			Addr:     kafka.TCP(p.conf.Brokers),
+			Topic:    topic,
+			Balancer: &kafka.LeastBytes{},
+			Async:    true,
+		}
+		p.addToWriterMap(topic, kw)
+	}
+
+	kw.WriteMessages(context.Background(), kafka.Message{Key: []byte(key), Value: []byte(value)})
+}
+
 func (p *Plugin) Close() error {
 	if !p.conf.Enable {
 		return nil
