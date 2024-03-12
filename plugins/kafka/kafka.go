@@ -88,12 +88,17 @@ func (p *Plugin) EnableMetrics(metrics MetricsWriter) {
 	p.metrics = metrics
 }
 
-func (p *Plugin) ReadFromTopic(topic string, consumerGroupID string, messageC chan<- Message) {
+func (p *Plugin) ReadFromTopicEnd(topic string, consumerGroupID string, messageC chan<- Message) {
 	ctx := context.Background()
-	p.ReadFromTopicWithContext(ctx, topic, consumerGroupID, messageC)
+	p.ReadFromTopicWithContext(ctx, topic, consumerGroupID, true, messageC)
 }
 
-func (p *Plugin) ReadFromTopicWithContext(ctx context.Context, topic string, consumerGroupID string, messageC chan<- Message) {
+func (p *Plugin) ReadFromTopic(topic string, consumerGroupID string, messageC chan<- Message) {
+	ctx := context.Background()
+	p.ReadFromTopicWithContext(ctx, topic, consumerGroupID, false, messageC)
+}
+
+func (p *Plugin) ReadFromTopicWithContext(ctx context.Context, topic string, consumerGroupID string, useLastOffset bool, messageC chan<- Message) {
 	l := p.logger.WithField("component", "kafka-reader-messages")
 
 	if !p.conf.Enable {
@@ -101,12 +106,18 @@ func (p *Plugin) ReadFromTopicWithContext(ctx context.Context, topic string, con
 		return
 	}
 
+	startOffset := kafka.FirstOffset
+	if useLastOffset {
+		startOffset = kafka.LastOffset
+	}
+
 	kr := p.getReader(topic)
 	if kr == nil {
 		kr = kafka.NewReader(kafka.ReaderConfig{
-			Brokers: strings.Split(p.conf.Brokers, ","),
-			GroupID: consumerGroupID,
-			Topic:   topic,
+			Brokers:     strings.Split(p.conf.Brokers, ","),
+			GroupID:     consumerGroupID,
+			Topic:       topic,
+			StartOffset: startOffset,
 		})
 		p.addToReaderMap(topic, kr)
 	}
